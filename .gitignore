@@ -1,3 +1,4 @@
+*.env
 # Logs
 logs
 *.log
@@ -29,3 +30,11 @@ coverage
 
 *.tsbuildinfo
 .vite/  
+.vscode/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+*.sqlite3
