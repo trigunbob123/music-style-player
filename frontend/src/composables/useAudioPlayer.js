@@ -1,239 +1,232 @@
-// src/composables/useJamendoAPI.js - 只包含 API 相關功能
-import { ref, reactive } from 'vue'
+// src/composables/useAudioPlayer.js
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 
-export function useJamendoAPI() {
-  // Jamendo API 配置
-  const API_BASE_URL = import.meta.env.VITE_JAMENDO_API_BASE_URL || 'https://api.jamendo.com/v3.0'
-  const CLIENT_ID = import.meta.env.VITE_JAMENDO_CLIENT_ID
-
-  if (!CLIENT_ID) {
-    console.error('請在 .env 文件中設置 VITE_JAMENDO_CLIENT_ID')
-  }
+export function useAudioPlayer() {
+  // 音频元素
+  const audio = ref(null)
   
-  // 響應式狀態
-  const loading = ref(false)
-  const error = ref(null)
-  const cache = reactive(new Map()) // 簡單的快取機制
+  // 播放器状态
+  const currentSong = ref(null)
+  const isPlaying = ref(false)
+  const currentTime = ref(0)
+  const duration = ref(0)
+  const volume = ref(50)
+  const isMuted = ref(false)
+  const isLoading = ref(false)
+  
+  // 播放列表
+  const playlist = ref([])
+  const currentIndex = ref(0)
+  const playMode = ref('sequence') // sequence, repeat, shuffle
+  
+  // 计算属性
+  const progress = computed(() => {
+    if (!duration.value) return 0
+    return (currentTime.value / duration.value) * 100
+  })
 
-  // 通用 API 請求函數
-  const makeAPIRequest = async (endpoint, params = {}) => {
-    const url = new URL(`${API_BASE_URL}/${endpoint}`)
-    
-    // 添加必要的參數
-    url.searchParams.append('client_id', CLIENT_ID)
-    url.searchParams.append('format', 'json')
-    
-    // 添加其他參數
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        url.searchParams.append(key, value)
-      }
-    })
+  const canGoPrevious = computed(() => {
+    return currentIndex.value > 0 || playMode.value === 'repeat'
+  })
 
-    const cacheKey = url.toString()
-    
-    // 檢查快取
-    if (cache.has(cacheKey)) {
-      return cache.get(cacheKey)
+  const canGoNext = computed(() => {
+    return currentIndex.value < playlist.value.length - 1 || playMode.value === 'repeat'
+  })
+
+  // 初始化音频元素
+  const initAudio = () => {
+    if (typeof window !== 'undefined') {
+      audio.value = new Audio()
+      
+      // 音频事件监听
+      audio.value.addEventListener('loadedmetadata', () => {
+        duration.value = audio.value.duration
+        isLoading.value = false
+      })
+      
+      audio.value.addEventListener('timeupdate', () => {
+        currentTime.value = audio.value.currentTime
+      })
+      
+      audio.value.addEventListener('ended', () => {
+        handleTrackEnd()
+      })
+      
+      audio.value.addEventListener('error', (e) => {
+        console.error('音频播放错误:', e)
+        isLoading.value = false
+        isPlaying.value = false
+      })
+      
+      audio.value.addEventListener('canplay', () => {
+        isLoading.value = false
+      })
+      
+      audio.value.addEventListener('waiting', () => {
+        isLoading.value = true
+      })
     }
+  }
+
+  // 播放音轨
+  const playTrack = async (track, trackList = null) => {
+    try {
+      if (!audio.value) {
+        initAudio()
+      }
+
+      // 如果提供了新的播放列表，更新它
+      if (trackList) {
+        playlist.value = trackList
+        currentIndex.value = trackList.findIndex(t => t.id === track.id)
+      }
+
+      currentSong.value = track
+      isLoading.value = true
+      
+      // 获取音频 URL
+      const audioUrl = getTrackAudioURL(track)
+      if (!audioUrl) {
+        throw new Error('无法获取音频 URL')
+      }
+
+      audio.value.src = audioUrl
+      audio.value.volume = isMuted.value ? 0 : volume.value / 100
+      
+      await audio.value.load()
+      await audio.value.play()
+      
+      isPlaying.value = true
+    } catch (error) {
+      console.error('播放失败:', error)
+      isLoading.value = false
+      isPlaying.value = false
+    }
+  }
+
+  // 播放/暂停
+  const togglePlayPause = async () => {
+    if (!audio.value || !currentSong.value) return
 
     try {
-      loading.value = true
-      error.value = null
-      
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (isPlaying.value) {
+        audio.value.pause()
+        isPlaying.value = false
+      } else {
+        await audio.value.play()
+        isPlaying.value = true
       }
-      
-      const data = await response.json()
-      
-      // 儲存到快取
-      cache.set(cacheKey, data)
-      
-      return data
-    } catch (err) {
-      error.value = err.message
-      console.error('Jamendo API Error:', err)
-      throw err
-    } finally {
-      loading.value = false
+    } catch (error) {
+      console.error('播放/暂停失败:', error)
     }
   }
 
-  // 獲取音軌資料
-  const getTracks = async (options = {}) => {
-    const params = {
-      limit: options.limit || 20,
-      offset: options.offset || 0,
-      order: options.order || 'popularity_total',
-      tags: options.tags || '',
-      search: options.search || '',
-      include: 'stats+licenses+musicinfo',
-      ...options.extraParams
+  // 上一首
+  const previousTrack = () => {
+    if (!playlist.value.length) return
+
+    let newIndex
+    if (playMode.value === 'shuffle') {
+      newIndex = Math.floor(Math.random() * playlist.value.length)
+    } else if (currentIndex.value > 0) {
+      newIndex = currentIndex.value - 1
+    } else if (playMode.value === 'repeat') {
+      newIndex = playlist.value.length - 1
+    } else {
+      return // 已经是第一首且不是循环模式
     }
 
-    const data = await makeAPIRequest('tracks', params)
-    return {
-      tracks: data.results || [],
-      totalPages: Math.ceil((data.headers?.results_count || 0) / params.limit),
-      currentPage: Math.floor(params.offset / params.limit) + 1,
-      totalResults: data.headers?.results_count || 0
+    currentIndex.value = newIndex
+    playTrack(playlist.value[newIndex])
+  }
+
+  // 下一首
+  const nextTrack = () => {
+    if (!playlist.value.length) return
+
+    let newIndex
+    if (playMode.value === 'shuffle') {
+      newIndex = Math.floor(Math.random() * playlist.value.length)
+    } else if (currentIndex.value < playlist.value.length - 1) {
+      newIndex = currentIndex.value + 1
+    } else if (playMode.value === 'repeat') {
+      newIndex = 0
+    } else {
+      return // 已经是最后一首且不是循环模式
+    }
+
+    currentIndex.value = newIndex
+    playTrack(playlist.value[newIndex])
+  }
+
+  // 处理音轨结束
+  const handleTrackEnd = () => {
+    if (playMode.value === 'repeat-one') {
+      // 单曲循环
+      audio.value.currentTime = 0
+      audio.value.play()
+    } else {
+      // 自动播放下一首
+      nextTrack()
     }
   }
 
-  // 獲取藝人資料
-  const getArtists = async (options = {}) => {
-    const params = {
-      limit: options.limit || 20,
-      offset: options.offset || 0,
-      order: options.order || 'popularity_total',
-      search: options.search || '',
-      include: 'stats+musicinfo',
-      ...options.extraParams
-    }
-
-    const data = await makeAPIRequest('artists', params)
-    return {
-      artists: data.results || [],
-      totalPages: Math.ceil((data.headers?.results_count || 0) / params.limit),
-      currentPage: Math.floor(params.offset / params.limit) + 1,
-      totalResults: data.headers?.results_count || 0
+  // 跳转到指定时间
+  const seekTo = (time) => {
+    if (audio.value && duration.value) {
+      const seekTime = Math.max(0, Math.min(time, duration.value))
+      audio.value.currentTime = seekTime
+      currentTime.value = seekTime
     }
   }
 
-  // 獲取專輯資料
-  const getAlbums = async (options = {}) => {
-    const params = {
-      limit: options.limit || 20,
-      offset: options.offset || 0,
-      order: options.order || 'popularity_total',
-      search: options.search || '',
-      include: 'stats+musicinfo',
-      ...options.extraParams
-    }
-
-    const data = await makeAPIRequest('albums', params)
-    return {
-      albums: data.results || [],
-      totalPages: Math.ceil((data.headers?.results_count || 0) / params.limit),
-      currentPage: Math.floor(params.offset / params.limit) + 1,
-      totalResults: data.headers?.results_count || 0
+  // 设置音量
+  const setVolume = (newVolume) => {
+    volume.value = Math.max(0, Math.min(100, newVolume))
+    if (audio.value && !isMuted.value) {
+      audio.value.volume = volume.value / 100
     }
   }
 
-  // 根據曲風獲取音軌
-  const getTracksByGenre = async (genre, options = {}) => {
-    const genreTagMap = {
-      'POP': 'pop',
-      'ROCK': 'rock',
-      'HIP HOP': 'hiphop',
-      'ELECTRONIC': 'electronic',
-      'JAZZ': 'jazz',
-      'WORLD': 'world',
-      'METAL': 'metal',
-      'CLASSICAL': 'classical',
-      'SOUNDTRACK': 'soundtrack',
-      'LOUNGE': 'lounge'
+  // 切换静音
+  const toggleMute = () => {
+    isMuted.value = !isMuted.value
+    if (audio.value) {
+      audio.value.volume = isMuted.value ? 0 : volume.value / 100
     }
+  }
 
-    return await getTracks({
-      ...options,
-      tags: genreTagMap[genre] || genre.toLowerCase(),
-      extraParams: {
-        ...options.extraParams,
-        tags: genreTagMap[genre] || genre.toLowerCase()
+  // 设置播放模式
+  const setPlayMode = (mode) => {
+    playMode.value = mode
+  }
+
+  // 添加到播放列表
+  const addToPlaylist = (tracks) => {
+    if (Array.isArray(tracks)) {
+      playlist.value.push(...tracks)
+    } else {
+      playlist.value.push(tracks)
+    }
+  }
+
+  // 清空播放列表
+  const clearPlaylist = () => {
+    playlist.value = []
+    currentIndex.value = 0
+  }
+
+  // 从播放列表移除
+  const removeFromPlaylist = (index) => {
+    if (index >= 0 && index < playlist.value.length) {
+      playlist.value.splice(index, 1)
+      if (currentIndex.value >= index && currentIndex.value > 0) {
+        currentIndex.value--
       }
-    })
-  }
-
-  // 獲取熱門音軌
-  const getPopularTracks = async (options = {}) => {
-    return await getTracks({
-      ...options,
-      order: 'popularity_total',
-      extraParams: {
-        ...options.extraParams,
-        order: 'popularity_total'
-      }
-    })
-  }
-
-  // 獲取最新音軌
-  const getLatestTracks = async (options = {}) => {
-    return await getTracks({
-      ...options,
-      order: 'releasedate_desc',
-      extraParams: {
-        ...options.extraParams,
-        order: 'releasedate_desc'
-      }
-    })
-  }
-
-  // 搜尋功能
-  const searchTracks = async (query, options = {}) => {
-    if (!query.trim()) return { tracks: [], totalPages: 0, currentPage: 1, totalResults: 0 }
-    
-    return await getTracks({
-      ...options,
-      search: query,
-      extraParams: {
-        ...options.extraParams,
-        search: query
-      }
-    })
-  }
-
-  const searchArtists = async (query, options = {}) => {
-    if (!query.trim()) return { artists: [], totalPages: 0, currentPage: 1, totalResults: 0 }
-    
-    return await getArtists({
-      ...options,
-      search: query,
-      extraParams: {
-        ...options.extraParams,
-        search: query
-      }
-    })
-  }
-
-  const searchAlbums = async (query, options = {}) => {
-    if (!query.trim()) return { albums: [], totalPages: 0, currentPage: 1, totalResults: 0 }
-    
-    return await getAlbums({
-      ...options,
-      search: query,
-      extraParams: {
-        ...options.extraParams,
-        search: query
-      }
-    })
-  }
-
-  // 格式化音軌資料
-  const formatTrackData = (track) => {
-    return {
-      id: track.id,
-      name: track.name,
-      artist_name: track.artist_name,
-      artist_id: track.artist_id,
-      album_name: track.album_name,
-      album_id: track.album_id,
-      duration: track.duration,
-      image: track.album_image || track.image || '/default-album.jpg',
-      audio: track.audio,
-      audiodownload: track.audiodownload,
-      audiodownload_allowed: track.audiodownload_allowed,
-      position: track.position,
-      releasedate: track.releasedate,
-      stats: track.stats,
-      musicinfo: track.musicinfo,
-      licenses: track.licenses
     }
   }
 
-  // 獲取音軌播放 URL
+  // 获取音轨播放 URL (与 Jamendo API 整合)
   const getTrackAudioURL = (track) => {
     if (track.audiodownload_allowed && track.audiodownload) {
       return track.audiodownload
@@ -241,31 +234,68 @@ export function useJamendoAPI() {
     return track.audio || null
   }
 
-  // 清除快取
-  const clearCache = () => {
-    cache.clear()
+  // 格式化时间
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // 监听音量变化
+  watch(volume, (newVolume) => {
+    if (audio.value && !isMuted.value) {
+      audio.value.volume = newVolume / 100
+    }
+  })
+
+  // 监听静音状态变化
+  watch(isMuted, (muted) => {
+    if (audio.value) {
+      audio.value.volume = muted ? 0 : volume.value / 100
+    }
+  })
+
+  // 初始化
+  if (typeof window !== 'undefined') {
+    nextTick(() => {
+      initAudio()
+    })
   }
 
   return {
-    // 狀態
-    loading,
-    error,
+    // 状态
+    currentSong,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    isLoading,
+    playlist,
+    currentIndex,
+    playMode,
+    
+    // 计算属性
+    progress,
+    canGoPrevious,
+    canGoNext,
     
     // 方法
-    getTracks,
-    getArtists,
-    getAlbums,
-    getTracksByGenre,
-    getPopularTracks,
-    getLatestTracks,
-    searchTracks,
-    searchArtists,
-    searchAlbums,
-    formatTrackData,
-    getTrackAudioURL,
-    clearCache,
+    playTrack,
+    togglePlayPause,
+    previousTrack,
+    nextTrack,
+    seekTo,
+    setVolume,
+    toggleMute,
+    setPlayMode,
+    addToPlaylist,
+    clearPlaylist,
+    removeFromPlaylist,
+    formatTime,
     
-    // 原始 API 請求方法
-    makeAPIRequest
+    // 音频元素引用
+    audio
   }
 }

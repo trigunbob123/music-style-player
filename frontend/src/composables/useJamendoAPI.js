@@ -1,20 +1,129 @@
-// composables/useJamendoAPI.js
+// src/composables/useJamendoAPI.js - 帶有測試資料的版本
 import { ref, reactive } from 'vue'
 
 export function useJamendoAPI() {
   // Jamendo API 配置
-const API_BASE_URL = import.meta.env.VITE_JAMENDO_API_BASE_URL || 'https://api.jamendo.com/v3.0'
-const CLIENT_ID = import.meta.env.VITE_JAMENDO_CLIENT_ID
+  const API_BASE_URL = import.meta.env.VITE_JAMENDO_API_BASE_URL || 'https://api.jamendo.com/v3.0'
+  const CLIENT_ID = import.meta.env.VITE_JAMENDO_CLIENT_ID || '93957ee4'
 
-if (!CLIENT_ID) {
-  console.error('請在 .env 文件中設置 VITE_JAMENDO_CLIENT_ID')
-}
   // 響應式狀態
   const loading = ref(false)
   const error = ref(null)
   const cache = reactive(new Map()) // 簡單的快取機制
 
-  // 通用 API 請求函數
+  // 測試資料
+  const getMockTracks = () => [
+    {
+      id: 1,
+      name: "夏日微風",
+      artist_name: "清新樂團",
+      album_name: "夏日精選",
+      duration: 210,
+      image: "https://picsum.photos/300/300?random=1",
+      audio: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload_allowed: true,
+      artist_id: 101,
+      album_id: 201,
+      position: 1,
+      releasedate: "2024-01-15",
+      stats: { downloads: 1000, listens: 5000 },
+      musicinfo: { tags: { genres: ["pop"], instruments: ["guitar"] } },
+      licenses: []
+    },
+    {
+      id: 2,
+      name: "電子夢境",
+      artist_name: "合成器大師",
+      album_name: "數位時代",
+      duration: 185,
+      image: "https://picsum.photos/300/300?random=2",
+      audio: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload_allowed: true,
+      artist_id: 102,
+      album_id: 202,
+      position: 1,
+      releasedate: "2024-01-10",
+      stats: { downloads: 800, listens: 3200 },
+      musicinfo: { tags: { genres: ["electronic"], instruments: ["synthesizer"] } },
+      licenses: []
+    },
+    {
+      id: 3,
+      name: "搖滾之魂",
+      artist_name: "雷鳴樂隊",
+      album_name: "搖滾傳說",
+      duration: 195,
+      image: "https://picsum.photos/300/300?random=3",
+      audio: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload_allowed: true,
+      artist_id: 103,
+      album_id: 203,
+      position: 1,
+      releasedate: "2024-01-05",
+      stats: { downloads: 1200, listens: 6800 },
+      musicinfo: { tags: { genres: ["rock"], instruments: ["guitar", "drums"] } },
+      licenses: []
+    },
+    {
+      id: 4,
+      name: "爵士咖啡",
+      artist_name: "午夜三重奏",
+      album_name: "咖啡館夜晚",
+      duration: 220,
+      image: "https://picsum.photos/300/300?random=4",
+      audio: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload_allowed: true,
+      artist_id: 104,
+      album_id: 204,
+      position: 1,
+      releasedate: "2023-12-20",
+      stats: { downloads: 600, listens: 2400 },
+      musicinfo: { tags: { genres: ["jazz"], instruments: ["piano", "saxophone"] } },
+      licenses: []
+    },
+    {
+      id: 5,
+      name: "古典晨曲",
+      artist_name: "室內樂團",
+      album_name: "晨光序曲",
+      duration: 300,
+      image: "https://picsum.photos/300/300?random=5",
+      audio: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload_allowed: true,
+      artist_id: 105,
+      album_id: 205,
+      position: 1,
+      releasedate: "2023-12-15",
+      stats: { downloads: 400, listens: 1800 },
+      musicinfo: { tags: { genres: ["classical"], instruments: ["violin", "piano"] } },
+      licenses: []
+    },
+    {
+      id: 6,
+      name: "嘻哈節拍",
+      artist_name: "節拍製造者",
+      album_name: "街頭韻律",
+      duration: 175,
+      image: "https://picsum.photos/300/300?random=6",
+      audio: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+      audiodownload_allowed: true,
+      artist_id: 106,
+      album_id: 206,
+      position: 1,
+      releasedate: "2024-01-20",
+      stats: { downloads: 1500, listens: 7200 },
+      musicinfo: { tags: { genres: ["hiphop"], instruments: ["drums", "bass"] } },
+      licenses: []
+    }
+  ]
+
+  // 通用 API 請求函數（帶有 fallback）
   const makeAPIRequest = async (endpoint, params = {}) => {
     const url = new URL(`${API_BASE_URL}/${endpoint}`)
     
@@ -52,11 +161,61 @@ if (!CLIENT_ID) {
       
       return data
     } catch (err) {
-      error.value = err.message
-      console.error('Jamendo API Error:', err)
-      throw err
+      console.warn('🔄 API 請求失敗，使用測試資料:', err.message)
+      error.value = `API 連接失敗: ${err.message}`
+      
+      // 返回測試資料
+      return getMockData(endpoint, params)
     } finally {
       loading.value = false
+    }
+  }
+
+  // 測試資料產生器
+  const getMockData = (endpoint, params) => {
+    const mockTracks = getMockTracks()
+    
+    if (endpoint === 'tracks') {
+      const limit = parseInt(params.limit) || 20
+      const offset = parseInt(params.offset) || 0
+      
+      // 根據標籤篩選
+      let filteredTracks = mockTracks
+      if (params.tags) {
+        filteredTracks = mockTracks.filter(track => 
+          track.musicinfo.tags.genres.includes(params.tags)
+        )
+      }
+      
+      // 根據搜尋篩選
+      if (params.search) {
+        const searchTerm = params.search.toLowerCase()
+        filteredTracks = mockTracks.filter(track => 
+          track.name.toLowerCase().includes(searchTerm) ||
+          track.artist_name.toLowerCase().includes(searchTerm) ||
+          track.album_name.toLowerCase().includes(searchTerm)
+        )
+      }
+      
+      // 分頁
+      const paginatedTracks = filteredTracks.slice(offset, offset + limit)
+      
+      return {
+        results: paginatedTracks,
+        headers: {
+          results_count: filteredTracks.length,
+          status: 'success'
+        }
+      }
+    }
+    
+    // 其他端點的預設回應
+    return { 
+      results: [], 
+      headers: { 
+        results_count: 0,
+        status: 'success'
+      } 
     }
   }
 
@@ -220,7 +379,7 @@ if (!CLIENT_ID) {
       album_name: track.album_name,
       album_id: track.album_id,
       duration: track.duration,
-      image: track.album_image || track.image || '/default-album.jpg',
+      image: track.image || `/api/placeholder/300/300?text=${encodeURIComponent(track.name)}`,
       audio: track.audio,
       audiodownload: track.audiodownload,
       audiodownload_allowed: track.audiodownload_allowed,
@@ -266,450 +425,5 @@ if (!CLIENT_ID) {
     
     // 原始 API 請求方法
     makeAPIRequest
-  }
-}
-
-// composables/useAudioPlayer.js
-import { ref, reactive, computed, watch, nextTick } from 'vue'
-
-export function useAudioPlayer() {
-  // 音頻元素
-  const audio = ref(null)
-  
-  // 播放器狀態
-  const currentSong = ref(null)
-  const isPlaying = ref(false)
-  const currentTime = ref(0)
-  const duration = ref(0)
-  const volume = ref(50)
-  const isMuted = ref(false)
-  const isLoading = ref(false)
-  
-  // 播放列表
-  const playlist = ref([])
-  const currentIndex = ref(0)
-  const playMode = ref('sequence') // sequence, repeat, shuffle
-  
-  // 計算屬性
-  const progress = computed(() => {
-    if (!duration.value) return 0
-    return (currentTime.value / duration.value) * 100
-  })
-
-  const canGoPrevious = computed(() => {
-    return currentIndex.value > 0 || playMode.value === 'repeat'
-  })
-
-  const canGoNext = computed(() => {
-    return currentIndex.value < playlist.value.length - 1 || playMode.value === 'repeat'
-  })
-
-  // 初始化音頻元素
-  const initAudio = () => {
-    if (typeof window !== 'undefined') {
-      audio.value = new Audio()
-      
-      // 音頻事件監聽
-      audio.value.addEventListener('loadedmetadata', () => {
-        duration.value = audio.value.duration
-        isLoading.value = false
-      })
-      
-      audio.value.addEventListener('timeupdate', () => {
-        currentTime.value = audio.value.currentTime
-      })
-      
-      audio.value.addEventListener('ended', () => {
-        handleTrackEnd()
-      })
-      
-      audio.value.addEventListener('error', (e) => {
-        console.error('音頻播放錯誤:', e)
-        isLoading.value = false
-        isPlaying.value = false
-      })
-      
-      audio.value.addEventListener('canplay', () => {
-        isLoading.value = false
-      })
-      
-      audio.value.addEventListener('waiting', () => {
-        isLoading.value = true
-      })
-    }
-  }
-
-  // 播放音軌
-  const playTrack = async (track, trackList = null) => {
-    try {
-      if (!audio.value) {
-        initAudio()
-      }
-
-      // 如果提供了新的播放列表，更新它
-      if (trackList) {
-        playlist.value = trackList
-        currentIndex.value = trackList.findIndex(t => t.id === track.id)
-      }
-
-      currentSong.value = track
-      isLoading.value = true
-      
-      // 獲取音頻 URL
-      const audioUrl = getTrackAudioURL(track)
-      if (!audioUrl) {
-        throw new Error('無法獲取音頻 URL')
-      }
-
-      audio.value.src = audioUrl
-      audio.value.volume = isMuted.value ? 0 : volume.value / 100
-      
-      await audio.value.load()
-      await audio.value.play()
-      
-      isPlaying.value = true
-    } catch (error) {
-      console.error('播放失敗:', error)
-      isLoading.value = false
-      isPlaying.value = false
-    }
-  }
-
-  // 播放/暫停
-  const togglePlayPause = async () => {
-    if (!audio.value || !currentSong.value) return
-
-    try {
-      if (isPlaying.value) {
-        audio.value.pause()
-        isPlaying.value = false
-      } else {
-        await audio.value.play()
-        isPlaying.value = true
-      }
-    } catch (error) {
-      console.error('播放/暫停失敗:', error)
-    }
-  }
-
-  // 上一首
-  const previousTrack = () => {
-    if (!playlist.value.length) return
-
-    let newIndex
-    if (playMode.value === 'shuffle') {
-      newIndex = Math.floor(Math.random() * playlist.value.length)
-    } else if (currentIndex.value > 0) {
-      newIndex = currentIndex.value - 1
-    } else if (playMode.value === 'repeat') {
-      newIndex = playlist.value.length - 1
-    } else {
-      return // 已經是第一首且不是循環模式
-    }
-
-    currentIndex.value = newIndex
-    playTrack(playlist.value[newIndex])
-  }
-
-  // 下一首
-  const nextTrack = () => {
-    if (!playlist.value.length) return
-
-    let newIndex
-    if (playMode.value === 'shuffle') {
-      newIndex = Math.floor(Math.random() * playlist.value.length)
-    } else if (currentIndex.value < playlist.value.length - 1) {
-      newIndex = currentIndex.value + 1
-    } else if (playMode.value === 'repeat') {
-      newIndex = 0
-    } else {
-      return // 已經是最後一首且不是循環模式
-    }
-
-    currentIndex.value = newIndex
-    playTrack(playlist.value[newIndex])
-  }
-
-  // 處理音軌結束
-  const handleTrackEnd = () => {
-    if (playMode.value === 'repeat-one') {
-      // 單曲循環
-      audio.value.currentTime = 0
-      audio.value.play()
-    } else {
-      // 自動播放下一首
-      nextTrack()
-    }
-  }
-
-  // 跳轉到指定時間
-  const seekTo = (time) => {
-    if (audio.value && duration.value) {
-      const seekTime = Math.max(0, Math.min(time, duration.value))
-      audio.value.currentTime = seekTime
-      currentTime.value = seekTime
-    }
-  }
-
-  // 設置音量
-  const setVolume = (newVolume) => {
-    volume.value = Math.max(0, Math.min(100, newVolume))
-    if (audio.value && !isMuted.value) {
-      audio.value.volume = volume.value / 100
-    }
-  }
-
-  // 切換靜音
-  const toggleMute = () => {
-    isMuted.value = !isMuted.value
-    if (audio.value) {
-      audio.value.volume = isMuted.value ? 0 : volume.value / 100
-    }
-  }
-
-  // 設置播放模式
-  const setPlayMode = (mode) => {
-    playMode.value = mode
-  }
-
-  // 添加到播放列表
-  const addToPlaylist = (tracks) => {
-    if (Array.isArray(tracks)) {
-      playlist.value.push(...tracks)
-    } else {
-      playlist.value.push(tracks)
-    }
-  }
-
-  // 清空播放列表
-  const clearPlaylist = () => {
-    playlist.value = []
-    currentIndex.value = 0
-  }
-
-  // 從播放列表移除
-  const removeFromPlaylist = (index) => {
-    if (index >= 0 && index < playlist.value.length) {
-      playlist.value.splice(index, 1)
-      if (currentIndex.value >= index && currentIndex.value > 0) {
-        currentIndex.value--
-      }
-    }
-  }
-
-  // 獲取音軌播放 URL (與 Jamendo API 整合)
-  const getTrackAudioURL = (track) => {
-    if (track.audiodownload_allowed && track.audiodownload) {
-      return track.audiodownload
-    }
-    return track.audio || null
-  }
-
-  // 格式化時間
-  const formatTime = (seconds) => {
-    if (!seconds || isNaN(seconds)) return '0:00'
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  // 監聽音量變化
-  watch(volume, (newVolume) => {
-    if (audio.value && !isMuted.value) {
-      audio.value.volume = newVolume / 100
-    }
-  })
-
-  // 監聽靜音狀態變化
-  watch(isMuted, (muted) => {
-    if (audio.value) {
-      audio.value.volume = muted ? 0 : volume.value / 100
-    }
-  })
-
-  // 初始化
-  if (typeof window !== 'undefined') {
-    nextTick(() => {
-      initAudio()
-    })
-  }
-
-  return {
-    // 狀態
-    currentSong,
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    isMuted,
-    isLoading,
-    playlist,
-    currentIndex,
-    playMode,
-    
-    // 計算屬性
-    progress,
-    canGoPrevious,
-    canGoNext,
-    
-    // 方法
-    playTrack,
-    togglePlayPause,
-    previousTrack,
-    nextTrack,
-    seekTo,
-    setVolume,
-    toggleMute,
-    setPlayMode,
-    addToPlaylist,
-    clearPlaylist,
-    removeFromPlaylist,
-    formatTime,
-    
-    // 音頻元素引用
-    audio
-  }
-}
-
-// composables/useAudioVisualizer.js
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
-
-export function useAudioVisualizer(audioElement) {
-  const audioContext = ref(null)
-  const analyser = ref(null)
-  const dataArray = ref(null)
-  const source = ref(null)
-  const animationId = ref(null)
-  
-  // 14條音頻條的數據
-  const audioData = reactive(new Array(14).fill(0))
-  const isInitialized = ref(false)
-
-  // 初始化音頻分析器
-  const initAnalyser = () => {
-    if (!audioElement.value || isInitialized.value) return
-
-    try {
-      // 創建音頻上下文
-      audioContext.value = new (window.AudioContext || window.webkitAudioContext)()
-      
-      // 創建分析器節點
-      analyser.value = audioContext.value.createAnalyser()
-      analyser.value.fftSize = 512 // 512 個頻率數據點
-      analyser.value.smoothingTimeConstant = 0.8
-      
-      // 創建音頻源節點
-      source.value = audioContext.value.createMediaElementSource(audioElement.value)
-      
-      // 連接節點
-      source.value.connect(analyser.value)
-      analyser.value.connect(audioContext.value.destination)
-      
-      // 創建數據陣列
-      const bufferLength = analyser.value.frequencyBinCount
-      dataArray.value = new Uint8Array(bufferLength)
-      
-      isInitialized.value = true
-      
-      // 開始分析
-      startAnalysis()
-    } catch (error) {
-      console.error('音頻分析器初始化失敗:', error)
-    }
-  }
-
-  // 開始音頻分析
-  const startAnalysis = () => {
-    if (!analyser.value || !dataArray.value) return
-
-    const analyze = () => {
-      // 獲取頻率數據
-      analyser.value.getByteFrequencyData(dataArray.value)
-      
-      // 將 256 個頻率數據點映射到 14 個音頻條
-      const barsCount = 14
-      const dataPointsPerBar = Math.floor(dataArray.value.length / barsCount)
-      
-      for (let i = 0; i < barsCount; i++) {
-        let sum = 0
-        const startIndex = i * dataPointsPerBar
-        const endIndex = startIndex + dataPointsPerBar
-        
-        // 計算每個音頻條的平均值
-        for (let j = startIndex; j < endIndex; j++) {
-          sum += dataArray.value[j]
-        }
-        
-        const average = sum / dataPointsPerBar
-        // 轉換為百分比 (0-100)
-        audioData[i] = Math.max(10, (average / 255) * 100)
-      }
-      
-      animationId.value = requestAnimationFrame(analyze)
-    }
-    
-    analyze()
-  }
-
-  // 停止分析
-  const stopAnalysis = () => {
-    if (animationId.value) {
-      cancelAnimationFrame(animationId.value)
-      animationId.value = null
-    }
-    
-    // 重置音頻數據
-    for (let i = 0; i < audioData.length; i++) {
-      audioData[i] = 10
-    }
-  }
-
-  // 恢復音頻上下文 (某些瀏覽器需要用戶互動後才能啟動)
-  const resumeAudioContext = async () => {
-    if (audioContext.value && audioContext.value.state === 'suspended') {
-      try {
-        await audioContext.value.resume()
-      } catch (error) {
-        console.error('恢復音頻上下文失敗:', error)
-      }
-    }
-  }
-
-  // 清理資源
-  const cleanup = () => {
-    stopAnalysis()
-    
-    if (audioContext.value) {
-      audioContext.value.close()
-      audioContext.value = null
-    }
-    
-    analyser.value = null
-    source.value = null
-    dataArray.value = null
-    isInitialized.value = false
-  }
-
-  // 監聽音頻元素變化
-  const watchAudioElement = (newAudioElement) => {
-    if (newAudioElement && !isInitialized.value) {
-      audioElement.value = newAudioElement
-      initAnalyser()
-    }
-  }
-
-  onUnmounted(() => {
-    cleanup()
-  })
-
-  return {
-    audioData,
-    isInitialized,
-    initAnalyser,
-    startAnalysis,
-    stopAnalysis,
-    resumeAudioContext,
-    cleanup,
-    watchAudioElement
   }
 }

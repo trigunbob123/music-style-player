@@ -1,6 +1,6 @@
 <template>
   <div class="w-64 bg-gradient-to-b from-purple-900 to-purple-800 h-full flex flex-col shadow-2xl">
-    <!-- Logo區域 -->
+    <!-- Logo区域 -->
     <div class="p-6 border-b border-purple-700/50">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
@@ -15,15 +15,15 @@
       </div>
     </div>
 
-    <!-- 主要功能按鈕區域 -->
+    <!-- 主要功能按钮区域 -->
     <div class="flex-1 p-4 space-y-3 sidebar-scroll">
-      <!-- 最新音樂按鈕 -->
+      <!-- 最新音乐按钮 -->
       <button 
         @click="selectLatestMusic"
         :class="[
           'w-full flex items-center space-x-3 p-4 rounded-xl transition-all duration-300 group',
           activeSection === 'latest' 
-            ? 'bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/25 transform scale-105' 
+            ? `bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/25 transform scale-105` 
             : 'bg-purple-800/50 hover:bg-purple-700/70 hover:transform hover:scale-105'
         ]"
       >
@@ -37,7 +37,7 @@
           </svg>
         </div>
         <div class="flex-1 text-left">
-          <p class="text-white font-semibold text-sm">最新音樂</p>
+          <p class="text-white font-semibold text-sm">最新音乐</p>
           <p :class="[
             'text-xs transition-colors duration-300',
             activeSection === 'latest' ? 'text-blue-100' : 'text-purple-300 group-hover:text-purple-200'
@@ -50,7 +50,7 @@
         </div>
       </button>
 
-      <!-- 熱門歌曲按鈕 -->
+      <!-- 热门歌曲按钮 - 修复 SVG 路径 -->
       <button 
         @click="selectPopularSongs"
         :class="[
@@ -64,13 +64,14 @@
           'w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300',
           activeSection === 'popular' ? 'bg-white/20' : 'bg-purple-700/50 group-hover:bg-purple-600/50'
         ]">
+          <!-- 修复后的心形图标 -->
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M4.318 6.318a4.5 4.5 0-000 6.364L12 20.364l7.682-7.682a4.5 4.5 0-00-6.364L12 4.636l-1.318 1.682z"/>
+                  d="M4.318 6.318a4.5 4.5 0 0 0 0 6.364L12 20.364l7.682-7.682a4.5 4.5 0 0 0 0-6.364L12 4.636l-1.318 1.682z"/>
           </svg>
         </div>
         <div class="flex-1 text-left">
-          <p class="text-white font-semibold text-sm">熱門歌曲</p>
+          <p class="text-white font-semibold text-sm">热门歌曲</p>
           <p :class="[
             'text-xs transition-colors duration-300',
             activeSection === 'popular' ? 'text-red-100' : 'text-purple-300 group-hover:text-purple-200'
@@ -83,16 +84,16 @@
         </div>
       </button>
 
-      <!-- 分隔線 -->
+      <!-- 分隔线 -->
       <div class="border-t border-purple-700/50 my-6"></div>
 
-      <!-- 其他功能區域 -->
+      <!-- 其他功能区域 -->
       <div class="space-y-2">
         <button class="w-full flex items-center space-x-3 p-3 rounded-lg text-purple-300 hover:text-white hover:bg-purple-700/50 transition-all duration-300 group">
           <div class="w-8 h-8 rounded-lg bg-purple-700/50 group-hover:bg-purple-600/50 flex items-center justify-center transition-all duration-300">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                    d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3.5L5 21V5z"/>
             </svg>
           </div>
           <span class="text-sm font-medium">我的收藏</span>
@@ -102,15 +103,15 @@
           <div class="w-8 h-8 rounded-lg bg-purple-700/50 group-hover:bg-purple-600/50 flex items-center justify-center transition-all duration-300">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"/>
             </svg>
           </div>
-          <span class="text-sm font-medium">會員登入</span>
+          <span class="text-sm font-medium">会员登入</span>
         </button>
       </div>
     </div>
 
-    <!-- 底部資訊 -->
+    <!-- 底部资讯 -->
     <div class="p-4 border-t border-purple-700/50">
       <div class="text-center">
         <p class="text-purple-400 text-xs">Version 1.0</p>
@@ -123,10 +124,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-// 響應式數據
-const activeSection = ref('latest') // 預設選中最新音樂
+// 响应式数据
+const activeSection = ref('latest') // 预设选中最新音乐
 
-// 發送事件給父組件
+// 发送事件给父组件
 const emit = defineEmits(['section-changed'])
 
 // 方法
@@ -134,8 +135,8 @@ const selectLatestMusic = () => {
   activeSection.value = 'latest'
   emit('section-changed', {
     section: 'latest',
-    title: '最新音樂',
-    description: '探索最新發布的音樂作品'
+    title: '最新音乐',
+    description: '探索最新发布的音乐作品'
   })
 }
 
@@ -143,28 +144,28 @@ const selectPopularSongs = () => {
   activeSection.value = 'popular'
   emit('section-changed', {
     section: 'popular',
-    title: '熱門歌曲',
-    description: '當前最受歡迎的音樂排行'
+    title: '热门歌曲',
+    description: '当前最受欢迎的音乐排行'
   })
 }
 
-// 計算屬性
+// 计算属性
 const currentSectionInfo = computed(() => {
   return {
     latest: {
-      title: '最新音樂',
-      description: '探索最新發布的音樂作品',
+      title: '最新音乐',
+      description: '探索最新发布的音乐作品',
       color: 'blue'
     },
     popular: {
-      title: '熱門歌曲', 
-      description: '當前最受歡迎的音樂排行',
+      title: '热门歌曲', 
+      description: '当前最受欢迎的音乐排行',
       color: 'red'
     }
   }[activeSection.value]
 })
 
-// 暴露給父組件的數據和方法
+// 暴露给父组件的数据和方法
 defineExpose({
   activeSection,
   currentSectionInfo,
@@ -174,7 +175,7 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 自定義滾動條 */
+/* 自定义滚动条 */
 .sidebar-scroll::-webkit-scrollbar {
   width: 4px;
 }
@@ -193,7 +194,7 @@ defineExpose({
   background: rgba(139, 92, 246, 0.5);
 }
 
-/* 按鈕點擊動畫 */
+/* 按钮点击动画 */
 button:active {
   transform: scale(0.95);
   transition: transform 0.1s ease-in-out;
